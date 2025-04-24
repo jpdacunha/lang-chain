@@ -1,30 +1,26 @@
-# Ollame RUNTIME
+# Ollama RUNTIME
 Run ollama with docker compose
 
 
 ## Installation
 
-### Run compose
+### Runnig Ollama from compose
 ```Console
 $ ./runtime/scripts/ollama.sh start
 ```
 
-### Install model 
+### Pulling needed models 
 
 #### Enter in docker container
 ```
-shell.sh
+$ ./runtime/scripts/ollama.sh shell
 ```
-
 #### Run in container
 ```
-ollama pull llama3
-ollama pull all-minilm
+ollama pull mistral
 ollama pull llama3.2:3b
-ollama pull deepseek-r1:7b
 exit
 ```
-
 
 ### If you want use Nvidia GPU with Ubuntu in 2 steps
 
@@ -50,14 +46,8 @@ exit
  sudo systemctl restart docker
 ```
 
-
-## Run & Use
-
-```
-start.sh
-```
+## Usage
 API : http://localhost:11434
-
 
 ## Inspired by 
 https://github.com/ThierryTouin/my-ollama/blob/main/README.md
