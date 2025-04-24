@@ -9,6 +9,7 @@ Pocking lang chain sing javascript
 * Etape 6 : First RAG sample using hardcoded document
 * Etape 7 : RAG using document loaded from URL
 * Etape 8 : RAG using document loaded PDF. Debugguing splitter script
+* Etape 9 : Keep conversation history during RAG
 
 To launch a sample
 ```console
