@@ -8,6 +8,7 @@ Pocking lang chain sing javascript
 * Etape 5 : non determistic parsers problem improvement
 * Etape 6 : First RAG sample using hardcoded document
 * Etape 7 : RAG using document loaded from URL
+* Etape 8 : RAG using document loaded PDF. Debugguing splitter script
 
 To launch a sample
 ```console
