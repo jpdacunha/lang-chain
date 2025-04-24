@@ -2,24 +2,30 @@
 import { ChatGroq } from "@langchain/groq";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import * as dotenv from "dotenv";
-import { Document } from "@langchain/core/documents";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { CheerioWebBaseLoader } from "@langchain/community/document_loaders/web/cheerio";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { OpenAIEmbeddings } from "@langchain/openai";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import { createRetrievalChain } from "langchain/chains/retrieval";
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { Document } from "@langchain/core/documents";
+
 
 dotenv.config();
 
 const llm = new ChatGroq({
-    model: "llama-3.2-3b-preview",
-    temperature: 0.7,
+    model: process.env.GROQ_MODEL_NAME,
+    apiKey: process.env.GROQ_API_KEY,
+    temperature: 0.7
 });
 
 const prompt = ChatPromptTemplate.fromTemplate(`
-    Answer the user's question.
+    Answer the user's question using only information from the context provided.
+    If the exact answer is not in the context, say "I don't know".
+    If the context is too long, say "Provided context is too long".
+    Always answer in french.
+    Give a response as short as possible.
     Context: {context}
     Question: {input}
 `);
@@ -29,36 +35,34 @@ const chain = await createStuffDocumentsChain({
     llm
 });
 
-// On charge le contenu de la page web
-const loader = new CheerioWebBaseLoader("https://js.langchain.com/docs/integrations/document_loaders/web_loaders/spider/");
+// Charger un document PDF
+const loader = new PDFLoader("documents/test.pdf");
 const docs = await loader.load();
-// console.log(docs);
 
 // On découpe le contenu de la page web en morceaux de 250 caractères
 const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 250,
-    chunkOverlap: 50,
+    chunkSize: 1500,
+    chunkOverlap: 150,
 });
 
 // On découpe les documents en morceaux
 const splittedDocs = await splitter.splitDocuments(docs);
-// console.log(splittedDocs);
+
+console.log("> splittedDocs -----------------------------------------");
+console.log(splittedDocs);
+console.log("< splittedDocs -----------------------------------------");
 
 // On met en place les embeddings
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "llama3.2:3b",
+    model: "mistral:latest",
     baseUrl: "http://127.0.0.1:11434",
 });
-
-/* const openaiEmbeddings = new OpenAIEmbeddings({
-    apiKey: xxx,
-}); */
 
 // On crée le vector store
 const vectorStore = await MemoryVectorStore.fromDocuments(splittedDocs, ollamaEmbeddings);
 
 const retriever = vectorStore.asRetriever({
-    k: 2,
+    k: 3,
 });
 
 const retrievalChain = await createRetrievalChain({
@@ -66,8 +70,13 @@ const retrievalChain = await createRetrievalChain({
     retriever,
 });
 
+/*const response = await retrievalChain.invoke({
+    input: "In which country was the Pope born?",
+});*/
+
 const response = await retrievalChain.invoke({
-    input: "What is spider web loader?",
+    input: "what is the Pope position regarding LGBTQ community?",
 });
 
 console.log(response);
+

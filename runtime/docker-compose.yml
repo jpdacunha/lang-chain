@@ -1,0 +1,32 @@
+name: "langChain-runtime"
+services:
+  ollama:
+    build: 
+      context: .
+      dockerfile: ollama/ollama.Dockerfile    
+    container_name: ollama
+    hostname: ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]  # Check if Ollama is responding
+      interval: 10s                    # Run the health check every 10 seconds
+      timeout: 30s                     # Timeout for the health check is 30 seconds
+      retries: 5                       # Retry 5 times before marking it as unhealthy
+      start_period: 10s                # Wait 10 seconds before starting health checks
+    volumes:
+      - ./ollama/models:/root/.ollama/models
+    networks:
+      - langChain-runtime-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  langChain-runtime-network:
+    driver: bridge
+    name: langChain-runtime-network
