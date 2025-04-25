@@ -39,17 +39,21 @@ const pdfDocs = await pdfLoader.load();
 const loader = new CheerioWebBaseLoader("https://js.langchain.com/docs/integrations/document_loaders/web_loaders/spider/");
 const docs = await loader.load();
 
+const allDocs = pdfDocs.concat(docs);
+
 const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 250,
+    chunkSize: 1500,
     chunkOverlap: 50,
 });
 
-const splittedDocs = await splitter.splitDocuments(docs);
+const splittedDocs = await splitter.splitDocuments(allDocs);
 
-splittedDocs.push(...pdfDocs);
+console.log("> splittedDocs -----------------------------------------");
+console.log(splittedDocs);
+console.log("< splittedDocs -----------------------------------------");
 
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "mistral:latest",
+    model: "llama3.2:3b",
     baseUrl: "http://127.0.0.1:11434",
 });
 

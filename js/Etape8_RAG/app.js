@@ -54,7 +54,7 @@ console.log("< splittedDocs -----------------------------------------");
 
 // On met en place les embeddings
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "mistral:latest",
+    model: "llama3.2:3b",
     baseUrl: "http://127.0.0.1:11434",
 });
 
