@@ -1,4 +1,4 @@
-# Lang Chain pocs
+# Lang Chain POCS
 Pocking lang chain using javascript, Ollama, and Grocq
 
 ## Pocs description
