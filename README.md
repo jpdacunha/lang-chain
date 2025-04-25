@@ -1,5 +1,5 @@
 # Lang Chain pocs
-Pocking lang chain sing javascript
+Pocking lang chain using javascript, Ollama, and Grocq
 
 ## Pocs description
 
