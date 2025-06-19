@@ -6,6 +6,7 @@ import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { createRetrievalChain } from "langchain/chains/retrieval";
 import { createHistoryAwareRetriever } from "langchain/chains/history_aware_retriever";
+import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
@@ -32,25 +33,53 @@ app.use((req, res, next) => {
 app.use(express.static('.'));
 app.use(express.json());
 
-// BEGIN CHAT using RAG
+async function generateSimplifiedFALCDocument(pdfDocs, llm) {
+    const pdfText = pdfDocs.map(doc => doc.pageContent).join("\n");
 
-const llm = new ChatGroq({
+    const simplificationPrompt = `
+    Simplify the following text according to the FALC (Easy to Read and Understand) principles.
+    Use short sentences, simple vocabulary, and explain difficult words if necessary.
+    Make the content accessible to people with cognitive disabilities or reading difficulties.
+    Respond with the simplified text only, without any additional comments or explanations.
+    Use only information from the provided context. Don't use your own knowledge or assumptions.
+
+    Text:
+    ${pdfText}
+    `;
+
+    const simplifiedResponse = await llm.invoke(simplificationPrompt);
+    const simplifiedText = simplifiedResponse.content || simplifiedResponse;
+
+    return {
+        pageContent: simplifiedText,
+        metadata: { source: "pdf_falc_simplified" }
+    };
+}
+
+
+const ollamaLLM = new ChatOllama({
+    model: process.env.OLLAMA_MODEL_NAME || "llama3.2:3b",
+    baseUrl: "http://127.0.0.1:11434",
+    temperature: 0.7,
+});
+
+const groqLLM = new ChatGroq({
     model: process.env.GROQ_MODEL_NAME,
     apiKey: process.env.GROQ_API_KEY,
-    temperature: 0.7
+    temperature: 0.7,
 });
 
 const instructions = `
-    Instructions:
-    1. Base your response only on the informations provided in the context
-    2. Consider the similarity scores when weighing the relevance of each document from context but don't reference it in your response
-    3. Give a response as short as possible using only one word or one sentence
-    4. If the context doesn't provide enough information, acknowledge this limitation
-    5. Only use information from the provided context. If the context doesn't contain enough information to answer fully, acknowledge this limitation.
+Instructions:
+1. Base your response only on the informations provided in the context
+2. Consider the similarity scores when weighing the relevance of each document from context but don't reference it in your response
+3. Give a response as short as possible using only one word or one sentence
+4. If the context doesn't provide enough information, acknowledge this limitation
+5. Only use information from the provided context. If the context doesn't contain enough information to answer fully, acknowledge this limitation.
 `;
 
 const prompt = ChatPromptTemplate.fromMessages([
-    ["system", "Answer the user's question based only on the following {context}."], 
+    ["system", "Answer the user's question based only on the following {context}."],
     ["system", instructions],
     new MessagesPlaceholder("chat_history"),
     ["user", "User Question: {input}"],
@@ -58,41 +87,37 @@ const prompt = ChatPromptTemplate.fromMessages([
 
 const chain = await createStuffDocumentsChain({
     prompt,
-    llm
+    llm: groqLLM
 });
 
 const pdfLoader = new PDFLoader("documents/test.pdf");
 const pdfDocs = await pdfLoader.load();
-console.log("> pdfDocs -----------------------------------------");
+console.log("> 01 pdfDocs / Loading raw documents -----------------------------------------");
 console.log(pdfDocs);
-console.log("< pdfDocs -----------------------------------------");
+console.log("< 01 pdfDocs -----------------------------------------");
+
+console.log("> 02 Generating simplified text for docs ---------------------------");
+const simplifiedDoc = await generateSimplifiedFALCDocument(pdfDocs, ollamaLLM);
+console.log("< 02 Generating simplified text for docs ---------------------------");
 
 
-
-const loader = new CheerioWebBaseLoader("https://js.langchain.com/docs/integrations/document_loaders/web_loaders/spider/");
-const docs = await loader.load();
-console.log("> docs -----------------------------------------");
-console.log(docs);
-console.log("< docs -----------------------------------------");
-
-const allDocs = [...pdfDocs, ...docs];
-console.log("> allDocs -----------------------------------------");
+console.log("> 03 allDocs / Merging docs original + simplified ---------------------------");
+const allDocs = [...pdfDocs, simplifiedDoc];
 console.log(allDocs);
-console.log("< allDocs -----------------------------------------");
+console.log("< 03 allDocs -----------------------------------------");
 
 const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1500,
     chunkOverlap: 150,
 });
 const splittedDocs = await splitter.splitDocuments(allDocs);
-
-console.log("> splittedDocs -----------------------------------------");
+console.log("> 04 splittedDocs / Splitting documents-----------------------------------------");
 console.log(splittedDocs);
-console.log("< splittedDocs -----------------------------------------");
+console.log("< 04 splittedDocs -----------------------------------------");
 
-//Embeddings need to match the selected IA llama = OllamaEmbeddings, Mistral = MistralEmbeddings, etc.
+console.log("> 05 Embeddings / Using ollama to generate embeddings-----------------------------------------");
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: process.env.EMBEDDINGS_MODEL_NAME || "llama3.2:3b",
+    model: process.env.OLLAMA_MODEL_NAME || "llama3.2:3b",
     baseUrl: "http://127.0.0.1:11434",
 });
 
@@ -102,6 +127,7 @@ const retriever = vectorStore.asRetriever({
     k: 4,
     minSimilarityScore: 0.8,
 });
+console.log("> 05 Embeddings -----------------------------------------");
 
 const rephrasePrompt = ChatPromptTemplate.fromMessages([
     new MessagesPlaceholder("chat_history"),
@@ -112,7 +138,7 @@ const rephrasePrompt = ChatPromptTemplate.fromMessages([
 const historyAwareRetriever = await createHistoryAwareRetriever({
     retriever,
     chatHistorySize: 2,
-    llm,
+    llm: groqLLM,
     rephrasePrompt,
 });
 
@@ -125,23 +151,19 @@ let chatHistory = [];
 
 app.post('/chat', async (req, res) => {
     const userMessage = req.body.message;
-    
+
     chatHistory.push(new HumanMessage(userMessage));
-    
+
     const response = await conversationChain.invoke({
         input: userMessage,
         chat_history: chatHistory,
     });
 
-    console.log(">> response -----------------------------------------");
-    console.log(response);
-    console.log("<< response -----------------------------------------");
-
     chatHistory.push(new AIMessage(response.answer));
-    
+
     res.json({ response: response.answer });
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`STARTED : Server running at http://localhost:${port}`);
 });

@@ -54,7 +54,7 @@ console.log("< splittedDocs -----------------------------------------");
 
 // On met en place les embeddings
 const ollamaEmbeddings = new OllamaEmbeddings({
-    model: "llama3.2:3b",
+    model: process.env.EMBEDDINGS_MODEL_NAME || "llama3.2:3b",
     baseUrl: "http://127.0.0.1:11434",
 });
 
@@ -70,13 +70,13 @@ const retrievalChain = await createRetrievalChain({
     retriever,
 });
 
-/*const response = await retrievalChain.invoke({
-    input: "In which country was the Pope born?",
-});*/
-
 const response = await retrievalChain.invoke({
-    input: "what is the Pope position regarding LGBTQ community?",
+    input: "In which country was the Pope born?",
 });
 
-console.log(response);
+/*const response = await retrievalChain.invoke({
+    input: "what is the Pope position regarding LGBTQ community?",
+});*/
 
+console.log(response);
+console.log("RESPONSE >>>>>>>>>>>>>>>>>> :" + response.answer);
