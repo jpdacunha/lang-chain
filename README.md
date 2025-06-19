@@ -11,17 +11,17 @@ Pocking lang chain using javascript, Ollama, and Grocq
 * Etape 6 : First RAG sample using hardcoded document
 * Etape 7 : RAG using document loaded from URL
 * Etape 8 : RAG using document loaded PDF. Debugguing splitter script
-* Etape 9 : Keep conversation history during RAG
-* Etape 10 : Chat interface with full RAG keeping context
+* Etape 9 : Etape 8 + Keep conversation history during RAG
+* Etape 10 : Etape 9 + Chat interface with full RAG keeping context
   * The chat model is not fully opérational because (I guess) the complexity of provided text
   * The context provide informations about spider (using url) and pope (using PDF).
   * Here you can find a picture of problems :
     IA is able to respond to both questions about spider and pope. IA does not provide good answers for all questions because related context chunks provided using RAG is not always the more relevant regarding the user's input.
    ![alt text](images/image.png)
     TODO :  Maybe using a larger model in ollama will help in terms of relevance
-* Etape 10_2 : Chat interface with full RAG keeping context. This version provide enhancements regarding abilty of the chat to respond
+* Etape 10_2 : Etape 10 + This version provide enhancements regarding abilty of the chat to respond
   * The improvement was to enhance current document content with a simplified version ot the content generated using ollama (in order to consumme less token on GROQ)
-  * Here is the compared results. It's work better
+  * Here is the compared results.
 
 | Before improvement | After improvement |
 |--------|---------|
@@ -41,10 +41,11 @@ Most of samples were tested using
 - GROQ using model : **llama-3.1-8b-instant** Don't forger to create / refresh API key for GROQ before trying to use it.
 - Ollama Model for embeddings : **llama3.2:3b**
 
+### 2. Start Ollama
+See [Readme](./runtime/README.md) of docker compose to start
 
-### 2. Execute following command to launch a sample
+### 3. Execute following command to launch a sample
 ```console
-$ ollama run <EMBEDDINGS_MODEL>
 $ cd ./js/<SAMPLE_DIR>
 $ npm install
 $ node ./app.js
